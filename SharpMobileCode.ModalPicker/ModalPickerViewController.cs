@@ -47,12 +47,16 @@ namespace SharpMobileCode.ModalPicker
                 switch(value)
                 {
                     case ModalPickerType.Date:
-                        DatePicker = new UIDatePicker(CGRect.Empty);
+						DatePicker = new UIDatePicker {
+							TranslatesAutoresizingMaskIntoConstraints = false
+						};
                         PickerView = null;
                         break;
                     case ModalPickerType.Custom:
                         DatePicker = null;
-                        PickerView = new UIPickerView(CGRect.Empty);
+						PickerView = new UIPickerView {
+							TranslatesAutoresizingMaskIntoConstraints = false
+						};
                         break;
                     default:
                         break;
@@ -86,125 +90,87 @@ namespace SharpMobileCode.ModalPicker
             InitializeControls();
         }
 
-        public override void ViewWillAppear(bool animated)
-        {
-            base.ViewDidAppear(animated);
-
-            Show();
-        }
-
         void InitializeControls()
         {
             View.BackgroundColor = UIColor.Clear;
-            _internalView = new UIView();
+			_internalView = new UIView {
+				TranslatesAutoresizingMaskIntoConstraints = false
+			};
 
-            _headerLabel = new UILabel(new CGRect(0, 0, 320/2, 44));
-            _headerLabel.AutoresizingMask = UIViewAutoresizing.FlexibleWidth;
-            _headerLabel.BackgroundColor = HeaderBackgroundColor;
-            _headerLabel.TextColor = HeaderTextColor;
-            _headerLabel.Text = HeaderText;
-			_headerLabel.TextAlignment = UITextAlignment.Center;
+			_headerLabel = new UILabel {
+            	AutoresizingMask = UIViewAutoresizing.FlexibleWidth,
+            	BackgroundColor = HeaderBackgroundColor,
+            	TextColor = HeaderTextColor,
+            	Text = HeaderText,
+				TextAlignment = UITextAlignment.Center,
+				TranslatesAutoresizingMaskIntoConstraints = false
+			};
 
 			_cancelButton = UIButton.FromType(UIButtonType.System);
 			_cancelButton.SetTitleColor(HeaderTextColor, UIControlState.Normal);
 			_cancelButton.BackgroundColor = UIColor.Clear;
 			_cancelButton.SetTitle(CancelButtonText, UIControlState.Normal);
 			_cancelButton.TouchUpInside += CancelButtonTapped;
+			_cancelButton.TranslatesAutoresizingMaskIntoConstraints = false;
+			AddButtonSizeConstraints (_cancelButton);
 
             _doneButton = UIButton.FromType(UIButtonType.System);
             _doneButton.SetTitleColor(HeaderTextColor, UIControlState.Normal);
             _doneButton.BackgroundColor = UIColor.Clear;
 			_doneButton.SetTitle(DoneButtonText, UIControlState.Normal);
             _doneButton.TouchUpInside += DoneButtonTapped;
+			_doneButton.TranslatesAutoresizingMaskIntoConstraints = false;
+			AddButtonSizeConstraints (_doneButton);
 
+			UIView picker = null;
             switch(PickerType)
             {
                 case ModalPickerType.Date:
-                    DatePicker.BackgroundColor = UIColor.White;
-                    _internalView.AddSubview(DatePicker);
+					picker = DatePicker;
                     break;
                 case ModalPickerType.Custom:
-                    PickerView.BackgroundColor = UIColor.White;
-                    _internalView.AddSubview(PickerView);
+					picker = PickerView;
                     break;
                 default:
                     break;
             }
+			picker.BackgroundColor = UIColor.White;
+			_internalView.AddSubview (picker);
             _internalView.BackgroundColor = HeaderBackgroundColor;
 
 			_internalView.AddSubview(_headerLabel);
 			_internalView.AddSubview (_cancelButton);
             _internalView.AddSubview(_doneButton);
 
+			_internalView.AddConstraints (new[] {
+				NSLayoutConstraint.Create (_cancelButton, NSLayoutAttribute.Top, NSLayoutRelation.Equal, _internalView, NSLayoutAttribute.Top, 1f, 7f),
+				NSLayoutConstraint.Create (_cancelButton, NSLayoutAttribute.Leading, NSLayoutRelation.Equal, _internalView, NSLayoutAttribute.Leading, 1f, 10f),
+				NSLayoutConstraint.Create (_headerLabel, NSLayoutAttribute.Baseline, NSLayoutRelation.Equal, _cancelButton, NSLayoutAttribute.Baseline, 1f, 0f),
+				NSLayoutConstraint.Create (_headerLabel, NSLayoutAttribute.Leading, NSLayoutRelation.Equal, _cancelButton, NSLayoutAttribute.Trailing, 1f, 10f),
+				NSLayoutConstraint.Create (_doneButton, NSLayoutAttribute.Baseline, NSLayoutRelation.Equal, _headerLabel, NSLayoutAttribute.Baseline, 1f, 0f),
+				NSLayoutConstraint.Create (_doneButton, NSLayoutAttribute.Leading, NSLayoutRelation.Equal, _headerLabel, NSLayoutAttribute.Trailing, 1f, 10f),
+				NSLayoutConstraint.Create (_internalView, NSLayoutAttribute.Trailing, NSLayoutRelation.Equal, _doneButton, NSLayoutAttribute.Trailing, 1f, 10f),
+				NSLayoutConstraint.Create (picker, NSLayoutAttribute.CenterX, NSLayoutRelation.Equal, _internalView, NSLayoutAttribute.CenterX, 1f, 0f),
+				NSLayoutConstraint.Create (picker, NSLayoutAttribute.Bottom, NSLayoutRelation.Equal, _internalView, NSLayoutAttribute.Bottom, 1f, 0f),
+				NSLayoutConstraint.Create (picker, NSLayoutAttribute.Top, NSLayoutRelation.Equal, _cancelButton, NSLayoutAttribute.Bottom, 1f, 5f),
+				NSLayoutConstraint.Create (_internalView, NSLayoutAttribute.Width, NSLayoutRelation.GreaterThanOrEqual, picker, NSLayoutAttribute.Width, 1f, 0f),
+			});
+
             Add(_internalView);
+			View.AddConstraints (new[] {
+				NSLayoutConstraint.Create (_internalView, NSLayoutAttribute.Leading, NSLayoutRelation.Equal, View, NSLayoutAttribute.Leading, 1f, 0f),
+				NSLayoutConstraint.Create (_internalView, NSLayoutAttribute.Trailing, NSLayoutRelation.Equal, View, NSLayoutAttribute.Trailing, 1f, 0f),
+				NSLayoutConstraint.Create (_internalView, NSLayoutAttribute.Bottom, NSLayoutRelation.Equal, View, NSLayoutAttribute.Bottom, 1f, 0f)
+			});
         }
 
-        void Show(bool onRotate = false)
-        {
-			var buttonSize = new CGSize(71, 30);
-
-			var width = _parent.View.Frame.Width;
-
-            var internalViewSize = CGSize.Empty;
-            switch(_pickerType)
-            {
-                case ModalPickerType.Date:
-                    internalViewSize = new CGSize(width, DatePicker.Frame.Height + _headerBarHeight);
-                    break;
-                case ModalPickerType.Custom:
-                    internalViewSize = new CGSize(width, PickerView.Frame.Height + _headerBarHeight);
-                    break;
-                default:
-                    break;
-            }
-
-            var internalViewFrame = CGRect.Empty;
-			if (InterfaceOrientation == UIInterfaceOrientation.Portrait)
-			{
-				if (onRotate)
-				{
-					internalViewFrame = new CGRect(0, View.Frame.Height - internalViewSize.Height,
-						internalViewSize.Width, internalViewSize.Height);
-				}
-				else
-				{
-					internalViewFrame = new CGRect(0, View.Bounds.Height - internalViewSize.Height,
-						internalViewSize.Width, internalViewSize.Height);
-				}
-			}
-			else
-			{
-				if (onRotate)
-				{
-					internalViewFrame = new CGRect(0, View.Bounds.Height - internalViewSize.Height,
-						internalViewSize.Width, internalViewSize.Height);
-				}
-				else
-				{
-					internalViewFrame = new CGRect(0, View.Frame.Height - internalViewSize.Height,
-						internalViewSize.Width, internalViewSize.Height);
-				}
-			}
-            _internalView.Frame = internalViewFrame;
-
-            switch(_pickerType)
-            {
-                case ModalPickerType.Date:
-                    DatePicker.Frame = new CGRect(DatePicker.Frame.X, _headerBarHeight, _internalView.Frame.Width,
-                                                      DatePicker.Frame.Height);
-                    break;
-                case ModalPickerType.Custom:
-                    PickerView.Frame = new CGRect(PickerView.Frame.X, _headerBarHeight, _internalView.Frame.Width,
-                                                      PickerView.Frame.Height);
-                    break;
-                default:
-                    break;
-            }
-
-			_headerLabel.Frame = new CGRect(20+buttonSize.Width, 4, _parent.View.Frame.Width - (40+2*buttonSize.Width), 35);
-			_doneButton.Frame = new CGRect(internalViewFrame.Width - buttonSize.Width - 10, 7, buttonSize.Width, buttonSize.Height);
-			_cancelButton.Frame = new CGRect(10, 7, buttonSize.Width, buttonSize.Height);
-        }
+		static void AddButtonSizeConstraints (UIButton button)
+		{
+			button.AddConstraints (new[] {
+				NSLayoutConstraint.Create (button, NSLayoutAttribute.Width, NSLayoutRelation.Equal, null, NSLayoutAttribute.NoAttribute, 1f, 71f),
+				NSLayoutConstraint.Create (button, NSLayoutAttribute.Height, NSLayoutRelation.Equal, null, NSLayoutAttribute.NoAttribute, 1f, 30f)
+			});
+		}
 
         void DoneButtonTapped (object sender, EventArgs e)
         {
@@ -219,19 +185,6 @@ namespace SharpMobileCode.ModalPicker
 		{
 			DismissViewController(true, null);
 		}
-
-        public override void DidRotate(UIInterfaceOrientation fromInterfaceOrientation)
-        {
-            base.DidRotate(fromInterfaceOrientation);
-
-            if (InterfaceOrientation == UIInterfaceOrientation.Portrait ||
-                InterfaceOrientation == UIInterfaceOrientation.LandscapeLeft ||
-                InterfaceOrientation == UIInterfaceOrientation.LandscapeRight)
-            {
-                Show(true);
-                View.SetNeedsDisplay();
-            }
-        }
     }
 
     public enum ModalPickerType
